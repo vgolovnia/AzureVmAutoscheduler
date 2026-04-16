@@ -26,7 +26,8 @@ Azure VM Autoscheduler is a .NET 8 worker service that runs continuously, polls 
     "PollIntervalMinutes": 5,
     "MaxParallelism": 5,
     "ShutdownAfterHours": 8,
-    "MockDataFile": "mock-vms.json"
+    "MockDataFile": "mock-vms.json",
+    "RuntimeStateFile": "vm-runtime-state.json"
   },
   "Csv": {
     "FilePath": "vm-log.csv"
@@ -60,11 +61,12 @@ Then set:
 
 ## Notes about the 8-hour rule
 
-Azure instance view gives reliable current power state, but not a durable VM uptime value for this use case. To keep API usage reasonable and avoid extra dependencies, the worker tracks when a VM was first observed in the `running` state during its own lifetime and uses that timestamp for the 8-hour rule.
+Azure instance view gives reliable current power state, but not a durable VM uptime value for this use case. To keep API usage reasonable without introducing external infrastructure, the worker persists the first observed `running` timestamp for each VM to a local JSON state file and reloads it on startup.
 
 That means:
-- the rule works correctly while the worker keeps running
-- after application restart, running durations are tracked again from the next observation point
+- the rule continues to work correctly across application restarts
+- no database or external cache is required
+- the persisted state is updated after each polling cycle
 
 ## Azure SDK usage
 

@@ -7,4 +7,5 @@ public sealed class AppOptions
     public int MaxParallelism { get; set; } = 5;
     public int ShutdownAfterHours { get; set; } = 8;
     public string MockDataFile { get; set; } = "mock-vms.json";
+    public string RuntimeStateFile { get; set; } = "vm-runtime-state.json";
 }

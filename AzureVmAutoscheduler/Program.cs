@@ -15,6 +15,7 @@ builder.Services.AddSingleton<TokenCredential, DefaultAzureCredential>();
 builder.Services.AddSingleton(sp => new ArmClient(sp.GetRequiredService<TokenCredential>()));
 
 builder.Services.AddSingleton<ICsvLogService, CsvLogService>();
+builder.Services.AddSingleton<IVmRuntimeStateStore, JsonVmRuntimeStateStore>();
 builder.Services.AddSingleton<IVmRuntimeTracker, VmRuntimeTracker>();
 builder.Services.AddSingleton<VmRuleEvaluator>();
 

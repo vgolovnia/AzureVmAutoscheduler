@@ -12,3 +12,4 @@ coverage.*
 vm-log.csv
 .DS_Store
 Thumbs.db
+vm-runtime-state.json

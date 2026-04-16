@@ -37,6 +37,7 @@ public sealed class VmPollingWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("VM autoscheduler worker started in {Mode} mode.", _options.Mode);
+        await _runtimeTracker.InitializeAsync(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -98,12 +99,14 @@ public sealed class VmPollingWorker : BackgroundService
                 });
 
                 await Task.WhenAll(tasks);
+                await _runtimeTracker.PersistAsync(stoppingToken);
 
                 _logger.LogInformation(
-                    "Polling finished at {UtcNow}. Shutdown={ShutdownCount}, Deallocate={DeallocateCount}",
+                    "Polling finished at {UtcNow}. Shutdown={ShutdownCount}, Deallocate={DeallocateCount}, TrackedRunningVms={TrackedCount}",
                     DateTime.UtcNow,
                     actionCounts.GetValueOrDefault(VmActionType.Shutdown),
-                    actionCounts.GetValueOrDefault(VmActionType.Deallocate));
+                    actionCounts.GetValueOrDefault(VmActionType.Deallocate),
+                    _runtimeTracker.Snapshot().Count);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -122,6 +125,15 @@ public sealed class VmPollingWorker : BackgroundService
             {
                 break;
             }
+        }
+
+        try
+        {
+            await _runtimeTracker.PersistAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist runtime state during shutdown.");
         }
 
         _logger.LogInformation("VM autoscheduler worker stopped.");

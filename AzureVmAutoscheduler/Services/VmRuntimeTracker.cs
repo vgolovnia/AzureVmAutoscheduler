@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using AzureVmAutoscheduler.Models;
 using AzureVmAutoscheduler.Services.Interfaces;
 
 namespace AzureVmAutoscheduler.Services;
@@ -6,6 +7,34 @@ namespace AzureVmAutoscheduler.Services;
 public sealed class VmRuntimeTracker : IVmRuntimeTracker
 {
     private readonly ConcurrentDictionary<string, DateTime> _runningSinceUtc = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IVmRuntimeStateStore _stateStore;
+    private readonly ILogger<VmRuntimeTracker> _logger;
+    private int _initialized;
+
+    public VmRuntimeTracker(IVmRuntimeStateStore stateStore, ILogger<VmRuntimeTracker> logger)
+    {
+        _stateStore = stateStore;
+        _logger = logger;
+    }
+
+    public async Task InitializeAsync(CancellationToken cancellationToken)
+    {
+        if (Interlocked.Exchange(ref _initialized, 1) == 1)
+        {
+            return;
+        }
+
+        IReadOnlyCollection<VmRuntimeStateEntry> entries = await _stateStore.LoadAsync(cancellationToken);
+        foreach (var entry in entries)
+        {
+            if (!string.IsNullOrWhiteSpace(entry.VmKey))
+            {
+                _runningSinceUtc[entry.VmKey] = entry.FirstSeenRunningUtc;
+            }
+        }
+
+        _logger.LogInformation("Loaded runtime state for {Count} VM(s).", _runningSinceUtc.Count);
+    }
 
     public DateTime? GetRunningSinceUtc(string vmKey)
     {
@@ -34,5 +63,22 @@ public sealed class VmRuntimeTracker : IVmRuntimeTracker
                 _runningSinceUtc.TryRemove(key, out _);
             }
         }
+    }
+
+    public Task PersistAsync(CancellationToken cancellationToken)
+    {
+        return _stateStore.SaveAsync(Snapshot(), cancellationToken);
+    }
+
+    public IReadOnlyCollection<VmRuntimeStateEntry> Snapshot()
+    {
+        return _runningSinceUtc
+            .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(x => new VmRuntimeStateEntry
+            {
+                VmKey = x.Key,
+                FirstSeenRunningUtc = x.Value
+            })
+            .ToArray();
     }
 }
