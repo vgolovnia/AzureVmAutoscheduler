@@ -1,0 +1,33 @@
+[
+  {
+    "subscriptionId": "sub-001",
+    "resourceGroup": "rg-app",
+    "name": "vm-running-over-8h",
+    "powerState": "running",
+    "isAllocated": true,
+    "runningSinceUtc": "2026-04-15T06:00:00Z",
+    "tags": {
+      "Autoshutdown": "1"
+    }
+  },
+  {
+    "subscriptionId": "sub-001",
+    "resourceGroup": "rg-app",
+    "name": "vm-stopped-allocated",
+    "powerState": "stopped",
+    "isAllocated": true,
+    "runningSinceUtc": null,
+    "tags": {
+      "Autoshutdown": "1"
+    }
+  },
+  {
+    "subscriptionId": "sub-002",
+    "resourceGroup": "rg-batch",
+    "name": "vm-no-tag",
+    "powerState": "running",
+    "isAllocated": true,
+    "runningSinceUtc": "2026-04-15T12:00:00Z",
+    "tags": {}
+  }
+]

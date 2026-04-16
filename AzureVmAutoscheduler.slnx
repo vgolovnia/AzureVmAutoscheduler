@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AzureVmAutoscheduler.Tests/AzureVmAutoscheduler.Tests.csproj" />
+  <Project Path="AzureVmAutoscheduler/AzureVmAutoscheduler.csproj" />
+</Solution>

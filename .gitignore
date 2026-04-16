@@ -1,0 +1,14 @@
+.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.cache
+*.log
+*.trx
+TestResults/
+coverage/
+coverage.*
+vm-log.csv
+.DS_Store
+Thumbs.db
