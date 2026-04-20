@@ -30,12 +30,12 @@ public class VmRuntimeTrackerTests
         var tracker = new VmRuntimeTracker(new InMemoryVmRuntimeStateStore(), NullLogger<VmRuntimeTracker>.Instance);
         var firstSeen = new DateTime(2026, 4, 16, 10, 0, 0, DateTimeKind.Utc);
 
-        tracker.UpdateState("sub/rg/vm1", "running", firstSeen);
+        tracker.UpdateState("sub/rg/vm1", true, firstSeen, firstSeen);
         var runningSince = tracker.GetRunningSinceUtc("sub/rg/vm1");
 
         Assert.That(runningSince, Is.EqualTo(firstSeen));
 
-        tracker.UpdateState("sub/rg/vm1", "stopped", firstSeen.AddHours(1));
+        tracker.UpdateState("sub/rg/vm1", false, firstSeen.AddHours(1), null);
 
         Assert.That(tracker.GetRunningSinceUtc("sub/rg/vm1"), Is.Null);
     }
@@ -46,8 +46,8 @@ public class VmRuntimeTrackerTests
         var tracker = new VmRuntimeTracker(new InMemoryVmRuntimeStateStore(), NullLogger<VmRuntimeTracker>.Instance);
         var now = new DateTime(2026, 4, 16, 10, 0, 0, DateTimeKind.Utc);
 
-        tracker.UpdateState("sub/rg/vm1", "running", now);
-        tracker.UpdateState("sub/rg/vm2", "running", now);
+        tracker.UpdateState("sub/rg/vm1", true, now, now);
+        tracker.UpdateState("sub/rg/vm2", true, now, now);
 
         tracker.RemoveMissing(["sub/rg/vm2"]);
 
@@ -62,7 +62,7 @@ public class VmRuntimeTrackerTests
         var tracker = new VmRuntimeTracker(store, NullLogger<VmRuntimeTracker>.Instance);
         var now = new DateTime(2026, 4, 16, 10, 0, 0, DateTimeKind.Utc);
 
-        tracker.UpdateState("sub/rg/vm1", "running", now);
+        tracker.UpdateState("sub/rg/vm1", true, now, now);
         await tracker.PersistAsync(CancellationToken.None);
 
         Assert.That(store.SavedEntries, Has.Count.EqualTo(1));

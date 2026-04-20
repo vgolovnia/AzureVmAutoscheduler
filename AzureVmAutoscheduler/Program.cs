@@ -13,6 +13,7 @@ builder.Services.Configure<CsvOptions>(builder.Configuration.GetSection("Csv"));
 
 builder.Services.AddSingleton<TokenCredential, DefaultAzureCredential>();
 builder.Services.AddSingleton(sp => new ArmClient(sp.GetRequiredService<TokenCredential>()));
+builder.Services.AddSingleton<HttpClient>();
 
 builder.Services.AddSingleton<ICsvLogService, CsvLogService>();
 builder.Services.AddSingleton<IVmRuntimeStateStore, JsonVmRuntimeStateStore>();
@@ -23,6 +24,7 @@ var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? ne
 
 if (string.Equals(appOptions.Mode, "Azure", StringComparison.OrdinalIgnoreCase))
 {
+    builder.Services.AddSingleton<IVmStartTimeProvider, AzureVmStartTimeProvider>();
     builder.Services.AddSingleton<IVmInventoryProvider, AzureVmInventoryProvider>();
     builder.Services.AddSingleton<IVmPowerActionService, AzureVmPowerActionService>();
 }

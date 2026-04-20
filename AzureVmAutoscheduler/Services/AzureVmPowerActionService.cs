@@ -19,9 +19,15 @@ public sealed class AzureVmPowerActionService : IVmPowerActionService
 
     public async Task ExecuteAsync(VmInfo vm, VmActionType action, CancellationToken cancellationToken)
     {
+        if (action == VmActionType.None)
+        {
+            return;
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
 
-        var vmResourceId = VirtualMachineResource.CreateResourceIdentifier(vm.SubscriptionId, vm.ResourceGroup, vm.Name);
+        var resourceName = string.IsNullOrWhiteSpace(vm.ResourceName) ? vm.Name : vm.ResourceName;
+        var vmResourceId = VirtualMachineResource.CreateResourceIdentifier(vm.SubscriptionId, vm.ResourceGroup, resourceName);
         var vmResource = _armClient.GetVirtualMachineResource(vmResourceId);
 
         _logger.LogInformation(
@@ -29,20 +35,37 @@ public sealed class AzureVmPowerActionService : IVmPowerActionService
             action,
             vm.SubscriptionId,
             vm.ResourceGroup,
-            vm.Name);
+            resourceName);
 
         switch (action)
         {
             case VmActionType.Shutdown:
                 await vmResource.PowerOffAsync(WaitUntil.Completed, skipShutdown: false, cancellationToken);
-                break;
+                _logger.LogInformation(
+                    "Completed {Action} for VM {SubscriptionId}/{ResourceGroup}/{VmName}",
+                    action,
+                    vm.SubscriptionId,
+                    vm.ResourceGroup,
+                    resourceName);
+                return;
 
             case VmActionType.Deallocate:
                 await vmResource.DeallocateAsync(WaitUntil.Completed, cancellationToken: cancellationToken);
-                break;
+                _logger.LogInformation(
+                    "Completed {Action} for VM {SubscriptionId}/{ResourceGroup}/{VmName}",
+                    action,
+                    vm.SubscriptionId,
+                    vm.ResourceGroup,
+                    resourceName);
+                return;
 
-            case VmActionType.None:
             default:
+                _logger.LogWarning(
+                    "Unsupported action {Action} requested for VM {SubscriptionId}/{ResourceGroup}/{VmName}",
+                    action,
+                    vm.SubscriptionId,
+                    vm.ResourceGroup,
+                    resourceName);
                 return;
         }
     }

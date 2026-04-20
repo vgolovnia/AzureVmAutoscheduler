@@ -5,9 +5,11 @@ public sealed class VmInfo
     public string SubscriptionId { get; set; } = string.Empty;
     public string ResourceGroup { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string ResourceName { get; set; } = string.Empty;
     public string PowerState { get; set; } = string.Empty;
     public bool IsAllocated { get; set; }
     public DateTime? RunningSinceUtc { get; set; }
+    public DateTime? StartedAtUtc { get; set; }
     public Dictionary<string, string> Tags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public bool HasAutoshutdownTag =>

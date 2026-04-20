@@ -20,7 +20,7 @@ public sealed class VmRuleEvaluator
             return VmActionType.None;
         }
 
-        if (string.Equals(vm.PowerState, "running", StringComparison.OrdinalIgnoreCase)
+        if (string.Equals(vm.PowerState, VmPowerStates.Running, StringComparison.OrdinalIgnoreCase)
             && vm.RunningSinceUtc.HasValue)
         {
             var runningFor = utcNow - vm.RunningSinceUtc.Value;
@@ -30,7 +30,7 @@ public sealed class VmRuleEvaluator
             }
         }
 
-        if (string.Equals(vm.PowerState, "stopped", StringComparison.OrdinalIgnoreCase) && vm.IsAllocated)
+        if (string.Equals(vm.PowerState, VmPowerStates.Stopped, StringComparison.OrdinalIgnoreCase) && vm.IsAllocated)
         {
             return VmActionType.Deallocate;
         }

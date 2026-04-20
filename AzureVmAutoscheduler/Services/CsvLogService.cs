@@ -1,15 +1,17 @@
-using System.Text;
+using System.Globalization;
 using AzureVmAutoscheduler.Models;
 using AzureVmAutoscheduler.Options;
 using AzureVmAutoscheduler.Services.Interfaces;
+using CsvHelper;
 using Microsoft.Extensions.Options;
 
 namespace AzureVmAutoscheduler.Services;
 
-public sealed class CsvLogService : ICsvLogService
+public sealed class CsvLogService : ICsvLogService, IDisposable
 {
     private readonly string _filePath;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private bool _disposed;
 
     public CsvLogService(IOptions<CsvOptions> options)
     {
@@ -18,6 +20,8 @@ public sealed class CsvLogService : ICsvLogService
 
     public async Task AppendRowsAsync(IEnumerable<VmLogRow> rows, CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
         var materialized = rows.ToList();
         if (materialized.Count == 0)
         {
@@ -27,34 +31,39 @@ public sealed class CsvLogService : ICsvLogService
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            var directory = Path.GetDirectoryName(_filePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
             var fileExists = File.Exists(_filePath);
 
             await using var stream = new FileStream(
                 _filePath,
                 FileMode.Append,
                 FileAccess.Write,
-                FileShare.Read);
+                FileShare.Read,
+                4096,
+                useAsync: true);
 
-            await using var writer = new StreamWriter(stream, Encoding.UTF8);
+            await using var writer = new StreamWriter(stream);
+            await using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
 
             if (!fileExists)
             {
-                await writer.WriteLineAsync("TimestampUtc,SubscriptionId,ResourceGroup,ComputerName,PowerState");
+                csv.WriteHeader<VmLogRow>();
+                await csv.NextRecordAsync();
             }
 
             foreach (var row in materialized)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
-                var line = string.Join(",",
-                    Escape(row.TimestampUtc.ToString("O")),
-                    Escape(row.SubscriptionId),
-                    Escape(row.ResourceGroup),
-                    Escape(row.ComputerName),
-                    Escape(row.PowerState));
-
-                await writer.WriteLineAsync(line);
+                csv.WriteRecord(row);
+                await csv.NextRecordAsync();
             }
+
+            await writer.FlushAsync(cancellationToken);
         }
         finally
         {
@@ -62,15 +71,14 @@ public sealed class CsvLogService : ICsvLogService
         }
     }
 
-    private static string Escape(string? value)
+    public void Dispose()
     {
-        value ??= string.Empty;
-
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
+        if (_disposed)
         {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
+            return;
         }
 
-        return value;
+        _lock.Dispose();
+        _disposed = true;
     }
 }

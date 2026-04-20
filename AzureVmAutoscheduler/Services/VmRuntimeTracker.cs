@@ -41,15 +41,25 @@ public sealed class VmRuntimeTracker : IVmRuntimeTracker
         return _runningSinceUtc.TryGetValue(vmKey, out var value) ? value : null;
     }
 
-    public void UpdateState(string vmKey, string powerState, DateTime utcNow)
+    public void UpdateState(string vmKey, bool isRunning, DateTime utcNow, DateTime? startedAtUtc = null)
     {
-        if (string.Equals(powerState, "running", StringComparison.OrdinalIgnoreCase))
+        if (!isRunning)
         {
-            _runningSinceUtc.TryAdd(vmKey, utcNow);
+            _runningSinceUtc.TryRemove(vmKey, out _);
             return;
         }
 
-        _runningSinceUtc.TryRemove(vmKey, out _);
+        if (startedAtUtc.HasValue)
+        {
+            _runningSinceUtc.AddOrUpdate(
+                vmKey,
+                startedAtUtc.Value,
+                (_, existing) => startedAtUtc.Value > existing ? startedAtUtc.Value : existing);
+
+            return;
+        }
+
+        _runningSinceUtc.TryAdd(vmKey, utcNow);
     }
 
     public void RemoveMissing(IEnumerable<string> activeVmKeys)
